@@ -24,3 +24,6 @@ The following is needed only if `Orbitron2Omnirig.exe` is not placed in the `{Or
 [Drivers]
 Orbitron2Omnirig=C:\path\to\Orbitron2Omnirig.exe
 ```
+
+### Changelog
+- v0.1.0: First version
