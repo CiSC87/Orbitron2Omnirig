@@ -27,3 +27,4 @@ Orbitron2Omnirig=C:\path\to\Orbitron2Omnirig.exe
 
 ### Changelog
 - v0.1.0: First version
+- v0.2.0: Update DL frequency as soon as needed
