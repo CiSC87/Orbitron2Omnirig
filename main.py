@@ -9,18 +9,18 @@ import win32com.client
 from termcolor import colored
 
 DATA_MAP = [
-        ("sat_name",'^SN"(.*)"[ |\r\n]'),
-        ("sat_azimuth",' AZ(\\S*)[ |\r\n]'),        # range form 0.0 to 360.0
-        ("sat_elevation",' EL(\\S*)[ |\r\n]'),      # range from -90.0 to 90.0
-        ("sat_downlink",' DN(\\S*)[ |\r\n]'),       # with doppler, [Hz] in range from 0 to N
-        ("sat_uplink",' UP(\\S*)[ |\r\n]'),         # with doppler, [Hz] in range from 0 to N
-        ("sat_distance",' RA(\\S*)[ |\r\n]'),       # km
-        ("sat_velocity",' RR(\\S*)[ |\r\n]'),       # km/s, negative=approaching positive=going-away
-        ("sat_longitude",' LO(\\S*)[ |\r\n]'),      # range from -180.0000 to 180.000 (W to E)
-        ("sat_latitude",' LA(\\S*)[ |\r\n]'),       # range from -90.0000 to 90.000 (S to N)
-        ("sat_altitude",' AL(\\S*)[ |\r\n]'),       # km
-        ("timestamp_utc",' TU(\\S*)[ |\r\n]'),      # YYYYMMDDhhmmss
-        ("timestamp_local",' TL(\\S*)[ |\r\n]'),    # YYYYMMDDhhmmss
+    ("sat_name", '^SN"(.*)"[ |\r\n]'),
+    ("sat_azimuth", ' AZ(\\S*)[ |\r\n]'),     # range form 0.0 to 360.0
+    ("sat_elevation", ' EL(\\S*)[ |\r\n]'),   # range from -90.0 to 90.0
+    ("sat_downlink", ' DN(\\S*)[ |\r\n]'),    # with doppler, [Hz] in range from 0 to N
+    ("sat_uplink", ' UP(\\S*)[ |\r\n]'),      # with doppler, [Hz] in range from 0 to N
+    ("sat_distance", ' RA(\\S*)[ |\r\n]'),    # km
+    ("sat_velocity", ' RR(\\S*)[ |\r\n]'),    # km/s, negative=approaching positive=going-away
+    ("sat_longitude", ' LO(\\S*)[ |\r\n]'),   # range from -180.0000 to 180.000 (W to E)
+    ("sat_latitude", ' LA(\\S*)[ |\r\n]'),    # range from -90.0000 to 90.000 (S to N)
+    ("sat_altitude", ' AL(\\S*)[ |\r\n]'),    # km
+    ("timestamp_utc", ' TU(\\S*)[ |\r\n]'),   # YYYYMMDDhhmmss
+    ("timestamp_local", ' TL(\\S*)[ |\r\n]'), # YYYYMMDDhhmmss
 ]
 COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE",
            "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
@@ -29,11 +29,11 @@ OMNIRIG_VFOB = 4096
 OMNIRIG_SPLITON = 32768
 OMNIRIG_SPLITOFF = 65536
 OMNIRIG_MODEFM = 1073741824
-FREQ_MAX_DELTA = 200
+FREQ_MAX_DELTA = 2000
 
 # Global variables :)
-FREQ_CURR_DL = 0
-FREQ_CURR_UL = 0
+FREQ_CURR_DL = 0  # Last set DL freq
+FREQ_CURR_UL = 0  # Last set UL freq
 RIG = False
 
 
@@ -56,6 +56,11 @@ def rig_get_data():
     return rig_data
 
 
+def rig_get_freq():
+    global RIG
+    return RIG.Rig1.Freq
+
+
 def rig_set_freq(vfo, freq):
     global RIG
     RIG.Rig1.Vfo = vfo
@@ -73,18 +78,19 @@ def adjust_freq(sat_data):
     global FREQ_CURR_UL
     exact_dl = float(sat_data["sat_downlink"])
     ecact_ul = float(sat_data["sat_uplink"])
-    # Adjust DL freq immediately as there is
-    # no penalty in adjusting VFO A
-    if exact_dl != FREQ_CURR_DL:
-        rig_set_freq(vfo=OMNIRIG_VFOA, freq=exact_dl)
-        FREQ_CURR_DL = exact_dl
-        print("Adjusting DL")
-    # Adjust UL freq if it's off substantially
-    # as we need to switch to VFO B to change it
-    if abs(ecact_ul-FREQ_CURR_UL) > FREQ_MAX_DELTA:
+
+    display_freq = int(rig_get_freq())
+    if abs(display_freq-int(FREQ_CURR_UL)) <= FREQ_MAX_DELTA:
+        # We're on VfoB
+        # We're transmitting
         rig_set_freq(vfo=OMNIRIG_VFOB, freq=ecact_ul)
         FREQ_CURR_UL = ecact_ul
-        print("Adjusting UL")
+    else:
+        # We assume we're on VfoA
+        # We're receiving or not yet initialized
+        rig_set_freq(vfo=OMNIRIG_VFOA, freq=exact_dl)
+        FREQ_CURR_DL = exact_dl
+    return
 
 
 def handle_data(sat_data_raw, rig_data):
