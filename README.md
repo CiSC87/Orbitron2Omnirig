@@ -28,3 +28,4 @@ Orbitron2Omnirig=C:\path\to\Orbitron2Omnirig.exe
 ### Changelog
 - v0.1.0: First version
 - v0.2.0: Update DL frequency as soon as needed
+- v0.3.0: Better handling of frequency adjust: we adjust active Vfo (A or B), always
